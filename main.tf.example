@@ -1,0 +1,90 @@
+terraform {
+  required_providers {
+    nsxt = {
+      source  = "vmware/nsxt"
+      version = "~> 3.1.1"
+    }
+    avi = {
+      source  = "avinetworks.vmware.com/avinetworks/avi"
+      version = "~> 20.1.2"
+    }
+  }
+}
+
+provider "nsxt" {
+  username = "admin"
+  password = ""
+  host     = "pao-nsxmgr-01.wasp.pvd.pez.pivotal.io"
+
+  allow_unverified_ssl = "true"
+}
+
+provider "avi" {                                                                                                                                                        
+  avi_username   = "admin"
+  avi_password   = ""
+  avi_controller = "pao-avi-01.wasp.pvd.pez.pivotal.io"
+  avi_tenant     = "admin"
+  avi_version    = "20.1.2"
+}
+
+module "avi" {
+  source = "./avi"
+
+  cloud_name="fault-domain-3"
+  vcenter_username="administrator@vsphere.local"
+  vcenter_datacenter="Datacenter"
+  vcenter_url="pao-vc-01.wasp.pvd.pez.pivotal.io"
+  vcenter_password=""
+  tenant="admin"
+
+  avi_se_mgmt_network_name="wasp-Mgmt-VMs"
+  avi_se_mgmt_network_mask="24"
+  avi_se_mgmt_network_subnet="10.65.97.0"
+  avi_se_mgmt_network_start_ip="10.65.97.123"
+  avi_se_mgmt_network_end_ip="10.65.97.128"
+
+  avi_data_network_name="avi-overlay-switch"
+  avi_data_network_subnet="192.168.32.0"
+  avi_data_network_mask="24"
+  avi_data_network_start_ip="192.168.32.6"
+  avi_data_network_end_ip="192.168.32.11"
+
+  avi_bgp_asn="65997"
+  nsxt_t0_bgp_asn="64527"
+  nsxt_t0_bgp_peer_ips=["192.168.32.1","192.168.32.2"]
+
+  vs_vip_address="10.65.103.11"
+  pool_members=["192.168.2.11","192.168.2.12","192.168.2.13"]
+
+  gslb_vs_vip_address="10.65.103.2"
+}
+
+module "opsmgr" {
+  source = "./opsmgr"
+
+  env_name="wasp-pas"
+  om_ipv4_address="10.65.103.10"
+  om_internal_ipv4_address="192.168.1.10"
+  global_snat_ip="10.65.103.9"
+  global_snat_cidr="192.168.0.0/16"
+  infra_snat_ip="10.65.103.8"
+  services_snat_ip="10.65.103.7"
+  nsxt_transport_zone="tz-overlay"
+  nsxt_edge_cluster="edge-cluster"
+  nsxt_t0_router="t0-router"
+}
+
+module "pas" {
+  source = "./pas"
+
+  env_name="wasp-pas"
+  nsxt_transport_zone="tz-overlay"
+  nsxt_edge_cluster="edge-cluster"
+  nsxt_t0_router="t0-router"
+  pas_ip_orgs_block="192.168.128.0/17"
+  pas_tag="pas-wasp"
+  snat_ip_pool_cidr="10.65.103.0/24"
+  snat_ip_pool_gateway="10.65.103.1"
+  snat_ip_pool_range="10.65.103.129-10.65.103.254"
+  deployment_snat_ip="10.65.103.6"
+}

@@ -1,0 +1,7 @@
+terraform.tfvars
+notes.txt
+.terraform*
+terraform.tfstate*
+terraform.tfstate.backup
+main.tf.q*
+main.tf.w*
